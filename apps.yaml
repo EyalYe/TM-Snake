@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  apps.yaml — your device's configuration. This is the ONLY file you edit.
+#
+#  It has two parts:
+#    core:  the TaskMaster-C3 OS — a SEALED dependency. Pin a version (branch/tag);
+#           never fork or edit it. Everything the OS does is fixed and immutable.
+#    apps:  YOUR apps. Each is a self-registering component (this repo's apps/, or a
+#           git repo). Add one entry per app; that's all it takes.
+#
+#  A build hook compiles this into main/idf_component.yml (generated, git-ignored) —
+#  you never touch that, and you never touch the core.
+# ═══════════════════════════════════════════════════════════════════════════
+core:
+  git: https://github.com/EyalYe/TaskMaster.git
+  path: components/taskmaster_core
+  version: main          # pin a release tag for stability, e.g. v1.0.0
+
+apps:
+  - name: app_snake
+    path: apps/app_snake
+  - name: app_skeleton
+    path: apps/app_skeleton
+

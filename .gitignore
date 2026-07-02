@@ -1,0 +1,11 @@
+# Generated from apps.yaml by tools/compose_apps.py — never commit.
+main/idf_component.yml
+
+# ESP-IDF build output + managed deps.
+build/
+managed_components/
+dependencies.lock
+sdkconfig
+sdkconfig.old
+
+__pycache__/
