@@ -5,6 +5,7 @@
  *   - Turn CW to steer the snake's head clockwise (90 degrees right)
  *   - Turn CCW to steer the snake's head counter-clockwise (90 degrees left)
  *   - Press Select button to reset/restart the game
+ *   - Press rotary encoder knob mid-game to pause/unpause
  *
  * Fullscreen display (no hint bar) with a 32x16 grid of 4x4 pixel blocks.
  */
@@ -40,9 +41,18 @@ TASKMASTER_REQUIRE_API(1, 1); /* Needs 1.1 for tick_ms periodic redraw support *
 #define SNAKE_X_OFFSET          0
 #define SNAKE_Y_OFFSET          0
 
+/* Pause Logo Aesthetics */
+#define SNAKE_PAUSE_BAR_W       4
+#define SNAKE_PAUSE_BAR_H       16
+#define SNAKE_PAUSE_LEFT_X      58
+#define SNAKE_PAUSE_RIGHT_X     66
+#define SNAKE_PAUSE_Y           24
+#define SNAKE_PAUSE_TXT_OFFSET  18
+
 /* Game states */
 static bool s_game_started;
 static bool s_game_over;
+static bool s_paused;
 static int s_snake_x[SNAKE_MAX_LEN];
 static int s_snake_y[SNAKE_MAX_LEN];
 static int s_snake_len;
@@ -75,6 +85,7 @@ static void spawn_food(void);
 static void change_direction(bool cw);
 static void draw_block(int gx, int gy);
 static void draw_food(int gx, int gy);
+static void draw_pause_logo(void);
 
 /* Helper to draw a single filled snake block */
 static void draw_block(int gx, int gy)
@@ -98,6 +109,35 @@ static void draw_food(int gx, int gy)
     lv_obj_set_style_border_color(rect, lv_color_white(), 0);
     lv_obj_set_style_border_width(rect, 1, 0);
     lv_obj_set_style_radius(rect, 0, 0);
+}
+
+/* Helper to draw the double-bar pause logo and centered text */
+static void draw_pause_logo(void)
+{
+    /* Left bar */
+    lv_obj_t *bar1 = lv_obj_create(ui_frame_content());
+    lv_obj_set_size(bar1, SNAKE_PAUSE_BAR_W, SNAKE_PAUSE_BAR_H);
+    lv_obj_set_pos(bar1, SNAKE_PAUSE_LEFT_X, SNAKE_PAUSE_Y);
+    lv_obj_set_style_bg_color(bar1, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(bar1, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(bar1, 0, 0);
+    lv_obj_set_style_radius(bar1, 0, 0);
+
+    /* Right bar */
+    lv_obj_t *bar2 = lv_obj_create(ui_frame_content());
+    lv_obj_set_size(bar2, SNAKE_PAUSE_BAR_W, SNAKE_PAUSE_BAR_H);
+    lv_obj_set_pos(bar2, SNAKE_PAUSE_RIGHT_X, SNAKE_PAUSE_Y);
+    lv_obj_set_style_bg_color(bar2, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(bar2, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(bar2, 0, 0);
+    lv_obj_set_style_radius(bar2, 0, 0);
+
+    /* Text label centered with an offset */
+    lv_obj_t *lbl = lv_label_create(ui_frame_content());
+    lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_tm_sans, 0);
+    lv_label_set_text(lbl, "PAUSED");
+    lv_obj_align(lbl, LV_ALIGN_CENTER, 0, SNAKE_PAUSE_TXT_OFFSET);
 }
 
 /* Spawns food at a random unoccupied cell */
@@ -125,6 +165,7 @@ static void init_game(void)
 {
     s_game_over = false;
     s_game_started = true;
+    s_paused = false;
     s_score = 0;
     s_snake_len = SNAKE_START_LEN;
     
@@ -173,7 +214,7 @@ static void change_direction(bool cw)
 static void update_game_state(void)
 {
     uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-    if (s_game_over || !s_game_started) {
+    if (s_game_over || !s_game_started || s_paused) {
         return;
     }
     if (now - s_last_update_ms < SNAKE_GAME_TICK_MS) {
@@ -242,6 +283,7 @@ static void snake_init(void)
 {
     s_game_started = false;
     s_game_over = false;
+    s_paused = false;
     s_score = 0;
     
     app_store_open(&s_store, "snake");
@@ -253,12 +295,12 @@ static void snake_on_event(uint8_t ev)
 {
     switch (ev) {
     case EV_ENCODER_CW:
-        if (s_game_started && !s_game_over) {
+        if (s_game_started && !s_game_over && !s_paused) {
             change_direction(true);
         }
         break;
     case EV_ENCODER_CCW:
-        if (s_game_started && !s_game_over) {
+        if (s_game_started && !s_game_over && !s_paused) {
             change_direction(false);
         }
         break;
@@ -267,8 +309,16 @@ static void snake_on_event(uint8_t ev)
         init_game();
         break;
     case EV_ENCODER_CLICK:
-        /* Encoder push can also trigger restart/start */
-        init_game();
+        /* Encoder push mid-game pauses/unpauses, otherwise resets/starts */
+        if (s_game_started && !s_game_over) {
+            s_paused = !s_paused;
+            if (!s_paused) {
+                /* Reset update timer on resume to prevent immediate jump */
+                s_last_update_ms = (uint32_t)(esp_timer_get_time() / 1000);
+            }
+        } else {
+            init_game();
+        }
         break;
     default:
         break;
@@ -278,7 +328,7 @@ static void snake_on_event(uint8_t ev)
 /* Render screen */
 static void snake_render(void)
 {
-    if (s_game_started && !s_game_over) {
+    if (s_game_started && !s_game_over && !s_paused) {
         update_game_state();
     }
 
@@ -305,6 +355,11 @@ static void snake_render(void)
         draw_food(s_food_x, s_food_y);
         for (int i = 0; i < s_snake_len; i++) {
             draw_block(s_snake_x[i], s_snake_y[i]);
+        }
+        
+        /* Overlay pause logo if paused */
+        if (s_paused) {
+            draw_pause_logo();
         }
     }
 
