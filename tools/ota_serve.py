@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """ota_serve.py — host a firmware update on your LAN so the device updates from you.
 
-After the first USB flash, updates go over the air: the device's OTA (Settings →
-Check update) downloads the app image from its `fw_url`. Run this on your machine,
-point `fw_url` at the URL it prints, and the device self-updates over Wi-Fi — nothing
-in the cloud, you host nothing permanently.
+USE THIS FOR OTA UPDATES (after the first USB flash). The right file is the app image
+**taskmaster_c3_app.bin** — NOT firmware-merged.bin (that one is for the first USB
+flash; see tools/flash.py). The device's OTA (Settings → Check update) downloads the
+app image from its `fw_url`; run this, point `fw_url` at the URL it prints, and the
+device self-updates over Wi-Fi — nothing in the cloud.
 
-    python tools/ota_serve.py                    # serve ./build/<app>.bin
-    python tools/ota_serve.py --bin build/app.bin --port 8000
+    python tools/ota_serve.py                              # local build: auto-serve ./build
+    python tools/ota_serve.py --bin taskmaster_c3_app.bin  # a downloaded CI/Release image
+    python tools/ota_serve.py --bin build/foo.bin --port 8000
 
 The device and this machine must be on the same network. Set `fw_url` via the device's
 web-config page (Settings → Web config), then trigger Settings → Check update.

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """flash.py — first-time USB flash for a TaskMaster-C3 device (no ESP-IDF needed).
 
-Only needs Python + esptool (`pip install esptool`) and a USB-C **data** cable.
-Flashes either the local ./build output (after `idf.py build`) or a single merged
-image (e.g. a CI/Release download).
+USE THIS FOR THE FIRST FLASH over USB. The right file is **firmware-merged.bin** (the
+whole image) — NOT taskmaster_c3_app.bin (that one is for OTA; see tools/ota_serve.py).
 
-    python tools/flash.py                      # flash ./build (local build)
-    python tools/flash.py --bin firmware.bin   # flash a merged image at 0x0
-    python tools/flash.py --port /dev/cu.usbmodemXXXX --bin firmware.bin
+Only needs Python + esptool (`pip install esptool`) and a USB-C **data** cable.
+
+    python tools/flash.py                             # local build: auto-flash ./build
+    python tools/flash.py --bin firmware-merged.bin   # a downloaded CI/Release image
+    python tools/flash.py --port /dev/cu.usbmodemXXXX --bin firmware-merged.bin
 
 If the device isn't detected / won't connect: hold **BOOT**, tap **RESET**, release
 **BOOT** (download mode), then retry.
